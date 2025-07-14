@@ -33,7 +33,18 @@ function updatePlaylistUI() {
   ul.innerHTML = "";
   playlist.forEach(item => {
     const li = document.createElement("li");
-    li.textContent = item.title;
+
+    const playBtn = document.createElement("button");
+    playBtn.textContent = "▶";
+    playBtn.onclick = () => player.loadVideoById(item.id);
+
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑";
+    delBtn.onclick = () => deleteVideo(item.id);
+
+    li.textContent = item.title + " ";
+    li.appendChild(playBtn);
+    li.appendChild(delBtn);
     ul.appendChild(li);
   });
 
@@ -42,7 +53,7 @@ function updatePlaylistUI() {
     onEnd: () => {
       const newList = [];
       document.querySelectorAll("#playlist li").forEach(li => {
-        const title = li.textContent;
+        const title = li.firstChild.textContent.trim();
         const item = playlist.find(p => p.title === title);
         if (item) newList.push(item);
       });
@@ -78,19 +89,39 @@ async function addVideo() {
 }
 
 async function saveVideo(videoId, title) {
-  const ref = collection(window.db, "playlists");
-  await addDoc(ref, {
-    sharedId: "a",                      // ← ココが大事！
+  const ref = window.collection(window.db, "playlists");
+  await window.addDoc(ref, {
+    sharedId: "a",
     folder: currentFolder || "default",
     videoId,
     title
   });
 }
 
+async function deleteVideo(videoId) {
+  const ref = window.collection(window.db, "playlists");
+  const snapshot = await window.getDocs(ref);
+  snapshot.forEach(async (doc) => {
+    const data = doc.data();
+    if (
+      data.sharedId === "a" &&
+      (data.folder || "default") === currentFolder &&
+      data.videoId === videoId
+    ) {
+      const docRef = doc.ref;
+      await window.deleteDoc(docRef);
+    }
+  });
+
+  // 再読み込み
+  playlist = playlist.filter(item => item.id !== videoId);
+  updatePlaylistUI();
+}
+
 async function loadVideos() {
   playlist = [];
-  const ref = collection(window.db, "playlists");
-  const snapshot = await getDocs(ref);
+  const ref = window.collection(window.db, "playlists");
+  const snapshot = await window.getDocs(ref);
   const folders = new Set();
   snapshot.forEach(doc => {
     const data = doc.data();
