@@ -37,14 +37,14 @@ function updatePlaylistUI() {
 
   new Sortable(ul, {
     animation: 150,
-    onEnd: function () {
-      const newPlaylist = [];
+    onEnd: () => {
+      const newList = [];
       document.querySelectorAll("#playlist li").forEach(li => {
         const title = li.textContent;
         const item = playlist.find(p => p.title === title);
-        if (item) newPlaylist.push(item);
+        if (item) newList.push(item);
       });
-      playlist = newPlaylist;
+      playlist = newList;
     }
   });
 }
@@ -60,17 +60,17 @@ async function addVideo() {
   const title = `動画ID: ${videoId}`;
   playlist.push({ id: videoId, title });
 
-  await saveVideoToFirebase(videoId, title);
+  await saveVideo(videoId, title);
   updatePlaylistUI();
   if (playlist.length === 1) {
     player.loadVideoById(videoId);
   }
 }
 
-async function saveVideoToFirebase(videoId, title) {
+async function saveVideo(videoId, title) {
   const ref = collection(window.db, "playlists");
   await addDoc(ref, {
-    uid: window.uid,
+    sharedId: "a", // 共有IDで保存（ログインなしでも固定ユーザー扱い）
     videoId,
     title
   });
@@ -78,17 +78,22 @@ async function saveVideoToFirebase(videoId, title) {
 
 async function loadVideos() {
   const ref = collection(window.db, "playlists");
-  const q = query(ref, where("uid", "==", window.uid));
-  const snapshot = await getDocs(q);
+  const snapshot = await getDocs(ref);
   snapshot.forEach(doc => {
     const data = doc.data();
-    playlist.push({ id: data.videoId, title: data.title });
+    if (data.sharedId === "a") {
+      playlist.push({ id: data.videoId, title: data.title });
+    }
   });
   updatePlaylistUI();
   if (playlist.length > 0) {
     player.loadVideoById(playlist[0].id);
   }
 }
+
+window.onload = () => {
+  loadVideos();
+};
 
 function shufflePlaylist() {
   for (let i = playlist.length - 1; i > 0; i--) {
