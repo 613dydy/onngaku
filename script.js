@@ -33,18 +33,13 @@ function updatePlaylistUI() {
   ul.innerHTML = "";
   playlist.forEach(item => {
     const li = document.createElement("li");
-
-    const playBtn = document.createElement("button");
-    playBtn.textContent = "▶";
-    playBtn.onclick = () => player.loadVideoById(item.id);
-
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "🗑";
-    delBtn.onclick = () => deleteVideo(item.id);
-
-    li.textContent = item.title + " ";
-    li.appendChild(playBtn);
-    li.appendChild(delBtn);
+    li.innerHTML = `
+      <span class="title">${item.title}</span>
+      <div class="btns">
+        <button class="play" onclick="player.loadVideoById('${item.id}')">▶</button>
+        <button class="delete" onclick="deleteVideo('${item.docId}')">🗑</button>
+      </div>
+    `;
     ul.appendChild(li);
   });
 
@@ -53,7 +48,7 @@ function updatePlaylistUI() {
     onEnd: () => {
       const newList = [];
       document.querySelectorAll("#playlist li").forEach(li => {
-        const title = li.firstChild.textContent.trim();
+        const title = li.querySelector(".title").textContent.trim();
         const item = playlist.find(p => p.title === title);
         if (item) newList.push(item);
       });
@@ -74,11 +69,18 @@ async function addVideo() {
   if (!videoId) return alert("有効なYouTube URLを入力してください");
 
   const title = `動画ID: ${videoId}`;
-  playlist.push({ id: videoId, title });
-
   try {
-    await saveVideo(videoId, title);
+    const ref = window.collection(window.db, "playlists");
+    const docRef = await window.addDoc(ref, {
+      sharedId: "a",
+      folder: currentFolder || "default",
+      videoId,
+      title
+    });
+
+    playlist.push({ id: videoId, title, docId: docRef.id });
     updatePlaylistUI();
+
     if (playlist.length === 1) {
       player.loadVideoById(videoId);
     }
@@ -88,34 +90,16 @@ async function addVideo() {
   }
 }
 
-async function saveVideo(videoId, title) {
-  const ref = window.collection(window.db, "playlists");
-  await window.addDoc(ref, {
-    sharedId: "a",
-    folder: currentFolder || "default",
-    videoId,
-    title
-  });
-}
-
-async function deleteVideo(videoId) {
-  const ref = window.collection(window.db, "playlists");
-  const snapshot = await window.getDocs(ref);
-  snapshot.forEach(async (doc) => {
-    const data = doc.data();
-    if (
-      data.sharedId === "a" &&
-      (data.folder || "default") === currentFolder &&
-      data.videoId === videoId
-    ) {
-      const docRef = doc.ref;
-      await window.deleteDoc(docRef);
-    }
-  });
-
-  // 再読み込み
-  playlist = playlist.filter(item => item.id !== videoId);
-  updatePlaylistUI();
+async function deleteVideo(docId) {
+  try {
+    const ref = window.doc(window.db, "playlists", docId);
+    await window.deleteDoc(ref);
+    playlist = playlist.filter(item => item.docId !== docId);
+    updatePlaylistUI();
+  } catch (err) {
+    alert("削除に失敗しました。");
+    console.error("削除エラー:", err);
+  }
 }
 
 async function loadVideos() {
@@ -123,19 +107,23 @@ async function loadVideos() {
   const ref = window.collection(window.db, "playlists");
   const snapshot = await window.getDocs(ref);
   const folders = new Set();
+
   snapshot.forEach(doc => {
     const data = doc.data();
     if (data.sharedId === "a") {
-      folders.add(data.folder || "default");
-      if ((data.folder || "default") === currentFolder) {
-        playlist.push({ id: data.videoId, title: data.title });
+      const folder = data.folder || "default";
+      folders.add(folder);
+      if (folder === currentFolder) {
+        playlist.push({ id: data.videoId, title: data.title, docId: doc.id });
       }
     }
   });
+
   allFolders = Array.from(folders);
   if (!currentFolder) {
     currentFolder = allFolders[0] || "default";
   }
+
   updateFolderUI();
   updatePlaylistUI();
   if (playlist.length > 0) {
