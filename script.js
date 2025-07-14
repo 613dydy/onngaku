@@ -61,20 +61,26 @@ async function addVideo() {
   const url = document.getElementById("youtubeInput").value;
   const videoId = extractVideoId(url);
   if (!videoId) return alert("有効なYouTube URLを入力してください");
+
   const title = `動画ID: ${videoId}`;
   playlist.push({ id: videoId, title });
 
-  await saveVideo(videoId, title);
-  updatePlaylistUI();
-  if (playlist.length === 1) {
-    player.loadVideoById(videoId);
+  try {
+    await saveVideo(videoId, title);
+    updatePlaylistUI();
+    if (playlist.length === 1) {
+      player.loadVideoById(videoId);
+    }
+  } catch (err) {
+    alert("保存に失敗しました。コンソールを確認してください。");
+    console.error("Firebase保存エラー:", err);
   }
 }
 
 async function saveVideo(videoId, title) {
   const ref = collection(window.db, "playlists");
   await addDoc(ref, {
-    sharedId: "a",
+    sharedId: "a",                      // ← ココが大事！
     folder: currentFolder || "default",
     videoId,
     title
