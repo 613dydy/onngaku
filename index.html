@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>俺プレイリスト</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+</head>
+<body>
+  <h1>🎧 俺プレイリスト</h1>
+  <button id="loginBtn">Googleでログイン</button>
+
+  <div id="main" style="display:none;">
+    <input type="text" id="youtubeInput" placeholder="YouTubeのURLを入力"/>
+    <button onclick="addVideo()">追加</button>
+    <button onclick="shufflePlaylist()">ランダム再生</button>
+
+    <ul id="playlist"></ul>
+    <div id="player"></div>
+  </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script type="module" src="firebase-config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
