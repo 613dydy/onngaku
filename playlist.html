@@ -9,6 +9,11 @@
 </head>
 <body>
   <h1>🎧 俺プレイリスト</h1>
+
+  <select id="folderSelect" onchange="changeFolder()"></select>
+  <input type="text" id="newFolderInput" placeholder="新しいフォルダ名" />
+  <button onclick="createFolder()">＋フォルダ作成</button>
+
   <input type="text" id="youtubeInput" placeholder="YouTubeのURLを入力"/>
   <button onclick="addVideo()">追加</button>
   <button onclick="shufflePlaylist()">ランダム再生</button>
